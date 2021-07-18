@@ -26,15 +26,17 @@ import pycuda.autoinit  # To automatically manage CUDA context creation and clea
 
 def load_normalized_test_case(test_images, pagelocked_buffer, preprocess_func):
     # Expected input dimensions
-    C, H, W = (3, 224, 224)
+    C, H, W = (1, 256, 256)
     # Normalize the images, concatenate them and copy to pagelocked memory.
-    data = np.asarray([preprocess_func(PIL.Image.open(img), C, H, W) for img in test_images]).flatten()
+    data = np.asarray([preprocess_func(PIL.Image.open(img), C, H, W)
+                      for img in test_images]).flatten()
     np.copyto(pagelocked_buffer, data)
 
 
 class HostDeviceMem(object):
     r""" Simple helper data class that's a little nicer to use than a 2-tuple.
     """
+
     def __init__(self, host_mem, device_mem):
         self.host = host_mem
         self.device = device_mem
@@ -78,12 +80,14 @@ def infer(engine_path, preprocess_func, batch_size=8, input_images=[], labels=[]
         engine = runtime.deserialize_cuda_engine(f.read())
 
         # Allocate buffers and create a CUDA stream.
-        inputs, outputs, dbindings, stream = allocate_buffers(engine, batch_size)
+        inputs, outputs, dbindings, stream = allocate_buffers(
+            engine, batch_size)
 
         # Contexts are used to perform inference.
         with engine.create_execution_context() as context:
             test_images = np.random.choice(input_images, size=batch_size)
-            load_normalized_test_case(test_images, inputs[0].host, preprocess_func)
+            load_normalized_test_case(
+                test_images, inputs[0].host, preprocess_func)
 
             inp = inputs[0]
             # Transfer input data to the GPU.
@@ -105,7 +109,8 @@ def infer(engine_path, preprocess_func, batch_size=8, input_images=[], labels=[]
                 probs = batch_out[topk_indices]
                 print("Input image:", test_image)
                 for pred, prob in zip(preds, probs):
-                    print("\tPrediction: {:30} Probability: {:0.2f}".format(pred, prob))
+                    print(
+                        "\tPrediction: {:30} Probability: {:0.2f}".format(pred, prob))
 
 
 def get_inputs(filename=None, directory=None, allowed_extensions=(".jpeg", ".jpg", ".png")):
@@ -124,7 +129,8 @@ def get_inputs(filename=None, directory=None, allowed_extensions=(".jpeg", ".jpg
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Run inference on TensorRT engines for Imagenet-based Classification models.')
+    parser = argparse.ArgumentParser(
+        description='Run inference on TensorRT engines for Imagenet-based Classification models.')
     parser.add_argument('--engine', type=str, required=True,
                         help='Path to TensorRT engine {resnet50, vgg16, inception_v1, mobilenetv2-1.0...}')
     parser.add_argument('-f', '--file', default=None, type=str,
